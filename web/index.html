@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slide Creator — Voice</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- Project picker — the landing screen. Choose a deck to open or create a new
+     one; opening a project starts the voice session for that deck. -->
+<div class="picker-overlay" id="pickerOverlay" hidden>
+  <div class="picker-card">
+    <div class="picker-head">
+      <div class="brand-mark picker-mark">◧</div>
+      <div>
+        <div class="picker-eyebrow">Slide Creator</div>
+        <h1 class="picker-title">Your projects</h1>
+      </div>
+    </div>
+    <p class="picker-sub">Each project is its own slide deck. Open one to keep working, or start a new one.</p>
+
+    <ul class="picker-list" id="pickerList"></ul>
+
+    <form class="picker-new" id="pickerNewForm">
+      <input id="pickerNewName" type="text" autocomplete="off" spellcheck="false" placeholder="New project name…">
+      <button type="submit" class="picker-new-btn">Create</button>
+    </form>
+    <div class="picker-note" id="pickerNote" hidden></div>
+  </div>
+</div>
+
+<!-- Setup / settings overlay — entered on first run (no key yet) and reachable
+     any time via the Settings button. -->
+<div class="setup-overlay" id="setupOverlay" hidden>
+  <div class="setup-card">
+    <div class="setup-eyebrow">Slide Creator · setup</div>
+    <h1 class="setup-title">Connect your API key</h1>
+    <p class="setup-sub">Your key is stored locally on this machine and used only to talk to the API. It never leaves your device except to call the provider.</p>
+
+    <form id="setupForm" class="setup-fields">
+      <div class="setup-field">
+        <label>Provider</label>
+        <div class="seg" id="providerSeg">
+          <button type="button" class="seg-btn active" data-provider="openai">OpenAI</button>
+          <button type="button" class="seg-btn" data-provider="azure">Azure OpenAI</button>
+        </div>
+      </div>
+
+      <div class="setup-field">
+        <label for="cfgApiKey">API key</label>
+        <input id="cfgApiKey" type="password" autocomplete="off" spellcheck="false" placeholder="sk-…">
+      </div>
+
+      <!-- OpenAI-only: base URL (for proxies / compatible endpoints) -->
+      <div class="setup-openai" id="openaiFields">
+        <div class="setup-field">
+          <label for="cfgBaseUrl">Base URL <span class="setup-hint">— optional, for proxies</span></label>
+          <input id="cfgBaseUrl" type="text" autocomplete="off" spellcheck="false" placeholder="https://api.openai.com/v1">
+        </div>
+      </div>
+
+      <!-- Azure-only fields -->
+      <div class="setup-azure" id="azureFields" hidden>
+        <div class="setup-field">
+          <label for="cfgAzureEndpoint">Azure endpoint</label>
+          <input id="cfgAzureEndpoint" type="text" autocomplete="off" spellcheck="false" placeholder="https://xxxxx.openai.azure.com">
+        </div>
+      </div>
+
+      <details class="setup-advanced">
+        <summary>Models &amp; voice</summary>
+        <div class="setup-grid">
+          <div class="setup-field">
+            <label for="cfgRealtime">Realtime (voice) model</label>
+            <input id="cfgRealtime" type="text" spellcheck="false">
+          </div>
+          <div class="setup-field">
+            <label for="cfgSlide">Slide model</label>
+            <input id="cfgSlide" type="text" spellcheck="false">
+          </div>
+          <div class="setup-field">
+            <label for="cfgImage">Image model</label>
+            <input id="cfgImage" type="text" spellcheck="false">
+          </div>
+          <div class="setup-field">
+            <label for="cfgVoice">Voice</label>
+            <select id="cfgVoice">
+              <option value="alloy">Alloy</option>
+              <option value="ash">Ash</option>
+              <option value="ballad">Ballad</option>
+              <option value="cedar">Cedar</option>
+              <option value="coral">Coral</option>
+              <option value="echo">Echo</option>
+              <option value="marin">Marin</option>
+              <option value="sage">Sage</option>
+              <option value="shimmer">Shimmer</option>
+              <option value="verse">Verse</option>
+            </select>
+          </div>
+        </div>
+      </details>
+
+      <button type="submit" class="setup-submit" id="setupSubmit">Save &amp; continue</button>
+      <div class="setup-error" id="setupError"></div>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-mark">◧</div>
+      <div class="brand-text">
+        <span class="brand-title">Slide Creator</span>
+        <span class="brand-sub">voice deck builder</span>
+      </div>
+    </div>
+
+    <!-- Active project; click to open the project picker (switch/new/rename/delete). -->
+    <div class="proj" id="proj">
+      <button class="proj-btn" id="projBtn" title="Switch project">
+        <span class="proj-eyebrow">project</span>
+        <span class="proj-name" id="projName">—</span>
+        <span class="proj-caret">▾</span>
+      </button>
+    </div>
+
+    <div class="topbar-state">
+      <span class="state-pill" id="stateWord">connecting</span>
+      <span class="state-sub" id="stateSub">opening the voice line…</span>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="topbar-btn" id="ctxToggle" title="Reference material the slide agent can use">
+        <span>Context</span>
+        <span class="topbar-badge" id="ctxBadge">0</span>
+      </button>
+      <button class="topbar-btn" id="diagToggle" title="Toggle event console">
+        <span>Console</span>
+        <span class="topbar-badge" id="evtCount">0</span>
+      </button>
+      <a class="topbar-btn" id="openDeck" href="/slides/deck.html" target="_blank" rel="noopener" title="Open saved deck">
+        <span>Open ↗</span>
+      </a>
+      <button class="topbar-btn" id="exportPdf" title="Render slides and save as PDF">
+        <span>Export PDF</span>
+      </button>
+      <button class="topbar-btn" id="settingsBtn" title="API key & models">
+        <span>Settings</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="creator-grid">
+
+    <!-- Deck preview (priority) -->
+    <section class="deck-pane">
+      <header class="pane-head">
+        <div class="pane-head-left">
+          <span class="pane-eyebrow">live preview</span>
+          <span class="pane-title" id="deckTitle">No deck yet</span>
+        </div>
+        <div class="pane-head-right">
+          <span class="pane-meta-row"><i>slides</i><b id="slideCount">0</b></span>
+          <span class="pane-meta-row"><i>builds</i><b id="buildCount">0</b></span>
+          <div class="deck-ctrl">
+            <button class="ctrl-btn" id="prevSlide" title="Previous slide" disabled>‹</button>
+            <span class="deck-pos" id="deckPos">— / —</span>
+            <button class="ctrl-btn" id="nextSlide" title="Next slide" disabled>›</button>
+          </div>
+        </div>
+      </header>
+      <div class="deck-stage">
+        <iframe id="deckFrame" class="deck-frame" title="Deck preview" sandbox="allow-scripts"></iframe>
+        <div class="deck-overlay" id="deckBuilding" hidden>
+          <div class="spinner"></div>
+          <div class="deck-overlay-text" id="deckBuildingText">building slides…</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right rail: outline + transcript + typed fallback -->
+    <section class="rail-pane">
+      <header class="pane-head">
+        <div class="pane-head-left">
+          <span class="pane-eyebrow">outline</span>
+          <span class="pane-title">Slides</span>
+        </div>
+      </header>
+      <ol class="outline" id="outline">
+        <li class="outline-empty">slides appear here as you build them</li>
+      </ol>
+
+      <header class="pane-head pane-head-sub">
+        <div class="pane-head-left">
+          <span class="pane-eyebrow">turn log</span>
+          <span class="pane-title">Conversation</span>
+        </div>
+      </header>
+      <div class="transcript" id="transcript"></div>
+
+      <form class="cmd-bar" id="cmdForm">
+        <input id="cmdInput" type="text" autocomplete="off" spellcheck="false"
+          placeholder="…or type an instruction (e.g. “slide 3 needs a chart”)">
+        <button type="submit" id="cmdSend">Send</button>
+      </form>
+    </section>
+
+  </main>
+
+  <footer class="action-bar">
+    <button class="ptt" id="ptt" aria-label="Push to talk" disabled>
+      <div class="ptt-icon"></div>
+      <div class="ptt-ring"></div>
+    </button>
+    <div class="action-meta">
+      <span class="action-headline">Hold to talk</span>
+      <span class="action-sub">press <kbd>SPACE</kbd> or hold the button · release to send the turn</span>
+    </div>
+    <div class="action-stats">
+      <div class="stat">
+        <span class="stat-num" id="rtt">— ms</span>
+        <span class="stat-lbl">round-trip</span>
+      </div>
+      <div class="stat stat-secondary">
+        <span class="stat-num" id="turns">0</span>
+        <span class="stat-lbl">turns</span>
+      </div>
+    </div>
+    <div class="action-conn">
+      <span class="pill" id="connPill">awaiting</span>
+      <span class="action-clock" id="clock">—</span>
+    </div>
+  </footer>
+
+  <!-- Context library (slide-in, left): reference .txt/.md files the slide
+       agent draws on when building. -->
+  <aside class="drawer drawer-left" id="ctxDrawer" aria-hidden="true">
+    <header class="drawer-head">
+      <div class="drawer-eyebrow">context library</div>
+      <button class="drawer-close" id="ctxClose" aria-label="Close context">×</button>
+    </header>
+    <div class="drawer-body ctx-body">
+      <p class="ctx-intro">Add <b>.txt</b> or <b>.md</b> files for the slide agent to draw on.
+        Toggle a file off to leave it out of the next build.</p>
+
+      <div class="ctx-actions">
+        <button class="ctx-add-btn" id="ctxAddBtn">＋ Add files</button>
+        <input type="file" id="ctxFile" accept=".txt,.md,.markdown,.text,text/plain,text/markdown" multiple hidden>
+      </div>
+      <div class="ctx-note" id="ctxNote" hidden></div>
+
+      <ul class="ctx-list" id="ctxList">
+        <li class="ctx-empty">no reference files yet</li>
+      </ul>
+
+      <div class="drawer-section-label" style="margin-top:8px">Images</div>
+      <p class="ctx-intro">Add images for the agent to place on slides. Each gets an
+        auto-generated description (editable) so the agent knows what it shows; pin one
+        to a slide to request it there.</p>
+      <div class="ctx-actions">
+        <button class="ctx-add-btn" id="imgAddBtn">＋ Add images</button>
+        <input type="file" id="imgFile" accept="image/*" multiple hidden>
+      </div>
+      <div class="ctx-note" id="imgNote" hidden></div>
+      <ul class="ctx-list ctx-img-list" id="imgList">
+        <li class="ctx-empty">no images yet</li>
+      </ul>
+    </div>
+  </aside>
+
+  <!-- Diagnostics console (slide-in, right) -->
+  <aside class="drawer drawer-right" id="diagDrawer" aria-hidden="true">
+    <header class="drawer-head">
+      <div class="drawer-eyebrow">event console</div>
+      <button class="drawer-close" id="diagClose" aria-label="Close console">×</button>
+    </header>
+    <div class="drawer-body diag-body">
+      <section class="diag-section">
+        <div class="drawer-section-label">Deployment</div>
+        <div class="diag-row"><span class="k">realtime</span><span class="v" id="diagRealtime">gpt-realtime</span></div>
+        <div class="diag-row"><span class="k">slide model</span><span class="v" id="diagSlide">gpt-5.4</span></div>
+        <div class="diag-row"><span class="k">slide agent</span><span class="v dim" id="diagSlideState">idle</span></div>
+      </section>
+      <section class="diag-section diag-section-stream">
+        <div class="drawer-section-label">Event stream <span class="diag-stream-count" id="evtCountStream">0 events</span></div>
+        <div class="log-body" id="logBody"></div>
+      </section>
+    </div>
+  </aside>
+  <div class="drawer-scrim" id="drawerScrim"></div>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

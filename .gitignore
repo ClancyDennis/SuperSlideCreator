@@ -1,0 +1,21 @@
+.env
+*.pyc
+__pycache__/
+.venv/
+venv/
+*.wav
+*.pcm
+*.log
+
+# macOS
+.DS_Store
+
+# Editor / tooling
+.claude/
+.playwright-mcp/
+
+# Generated decks
+slides/
+
+# Leftover/test image assets (app writes generated images under its own data dir)
+images/

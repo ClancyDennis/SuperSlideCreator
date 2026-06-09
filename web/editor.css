@@ -1,0 +1,91 @@
+/* Slide Creator — manual editor chrome. Reuses tokens from style.css. */
+
+.editor-grid{
+  flex:1;display:grid;grid-template-columns:240px 1fr 300px;gap:16px;
+  padding:16px 20px;min-height:0;
+}
+
+/* ——— Slide rail (left) ——— */
+.editor-rail{display:flex;flex-direction:column;min-height:0}
+.editor-rail .outline{flex:1;overflow:auto}
+
+/* ——— WYSIWYG stage (center) ——— */
+.editor-stage-pane{display:flex;flex-direction:column;min-height:0}
+.editor-stage{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  background:rgba(0,0,0,.25);border-radius:var(--radius);overflow:hidden;
+  border:1px solid var(--line);min-height:0;padding:14px;
+}
+/* The deck renders on a fixed 16:9 canvas; constrain the frame to that ratio
+   so editing matches the exported look. */
+#editorFrame{
+  width:100%;aspect-ratio:16/9;max-height:100%;border:0;border-radius:10px;
+  background:#0b0c10;box-shadow:0 20px 60px rgba(0,0,0,.45);
+}
+
+/* ——— Inspector (right) ——— */
+.editor-inspector{display:flex;flex-direction:column;gap:0;overflow:auto}
+.insp-empty{
+  padding:20px 18px;font-size:13px;line-height:1.6;color:var(--ink-faint);
+}
+.insp-section{display:flex;flex-direction:column;gap:14px;padding:16px 18px}
+.insp-meta{
+  font:600 11px/1.4 var(--mono);color:var(--ink-faint);letter-spacing:.04em;
+  word-break:break-all;
+}
+.insp-field{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  font-size:12px;color:var(--ink-dim);font-weight:600;
+}
+.insp-field-col{flex-direction:column;align-items:stretch;gap:6px}
+.insp-field>span{display:flex;gap:6px;align-items:baseline}
+.insp-field>span i{font-style:normal;color:var(--ink-faint);font:500 11px/1 var(--mono)}
+.insp-field input[type=color]{
+  width:46px;height:28px;padding:0;border:1px solid var(--line);border-radius:7px;
+  background:var(--panel);cursor:pointer;
+}
+.insp-field input[type=range]{flex:1;accent-color:var(--accent);max-width:150px}
+.insp-field select,.insp-field textarea{
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  color:var(--ink);font:inherit;font-size:12px;padding:6px 8px;
+}
+.insp-field textarea{width:100%;resize:vertical;font-size:12px;line-height:1.5}
+
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{
+  background:var(--panel);border:0;color:var(--ink-dim);padding:6px 12px;
+  cursor:pointer;font-size:13px;border-left:1px solid var(--line);
+}
+.seg button:first-child{border-left:0}
+.seg button.is-active{background:rgba(124,140,255,.22);color:#c3cbff}
+
+.insp-btn{
+  background:var(--panel);border:1px solid var(--line);border-radius:9px;
+  color:var(--ink);font:600 12px/1 var(--sans);padding:9px 12px;cursor:pointer;
+  transition:.15s;
+}
+.insp-btn:hover{border-color:rgba(255,255,255,.2)}
+.insp-btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent-2));
+  color:#0b0c10;border:0}
+.insp-btn:disabled{opacity:.5;cursor:wait}
+.insp-clear{
+  background:transparent;border:1px solid var(--line);border-radius:8px;
+  color:var(--ink-faint);font:600 11px/1 var(--sans);padding:8px;cursor:pointer;
+}
+.insp-clear:hover{color:var(--err);border-color:rgba(255,107,107,.4)}
+.insp-note{
+  font-size:11px;line-height:1.5;color:var(--ink-faint);
+  background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 10px;
+}
+.insp-note.is-err{color:#ffb1b1;border-color:rgba(255,107,107,.35)}
+
+/* ——— Save state pill states ——— */
+.state-pill.is-dirty{background:rgba(255,180,84,.14);color:#ffd49a;border-color:rgba(255,180,84,.35)}
+.state-pill.is-saving{background:rgba(92,200,255,.16);color:#a9e3ff;border-color:rgba(92,200,255,.4)}
+.state-pill.is-saved{background:rgba(82,211,154,.16);color:#9be9c4;border-color:rgba(82,211,154,.4)}
+.state-pill.is-err{background:rgba(255,107,107,.14);color:#ffb1b1;border-color:rgba(255,107,107,.35)}
+
+.topbar-btn-primary{
+  background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#0b0c10;border:0;
+}
+.topbar-btn-primary:hover{filter:brightness(1.07)}

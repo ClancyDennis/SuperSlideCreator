@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slide Creator — Editor</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <header class="topbar">
+    <div class="topbar-brand">
+      <div class="brand-mark">◧</div>
+      <div class="brand-text">
+        <span class="brand-title">Slide Creator</span>
+        <span class="brand-sub" id="deckTitle">editor</span>
+      </div>
+    </div>
+
+    <div class="topbar-state">
+      <span class="state-pill" id="saveState">loaded</span>
+      <span class="state-sub" id="saveSub">double-click text to edit · click an element to style it</span>
+    </div>
+
+    <div class="topbar-actions">
+      <a class="topbar-btn" href="/" title="Back to voice builder"><span>← Voice</span></a>
+      <a class="topbar-btn" id="openDeck" href="/slides/deck.html" target="_blank" rel="noopener"><span>Open ↗</span></a>
+      <button class="topbar-btn topbar-btn-primary" id="saveBtn"><span>Save</span></button>
+    </div>
+  </header>
+
+  <main class="editor-grid">
+
+    <!-- Slide rail -->
+    <aside class="rail-pane editor-rail">
+      <header class="pane-head">
+        <div class="pane-head-left">
+          <span class="pane-eyebrow">slides</span>
+          <span class="pane-title">Outline</span>
+        </div>
+      </header>
+      <ol class="outline" id="outline">
+        <li class="outline-empty">no slides — build a deck in the voice app first</li>
+      </ol>
+    </aside>
+
+    <!-- WYSIWYG stage -->
+    <section class="deck-pane editor-stage-pane">
+      <div class="editor-stage">
+        <iframe id="editorFrame" class="deck-frame" title="Slide editor"></iframe>
+      </div>
+    </section>
+
+    <!-- Inspector -->
+    <aside class="rail-pane editor-inspector">
+      <header class="pane-head">
+        <div class="pane-head-left">
+          <span class="pane-eyebrow">inspector</span>
+          <span class="pane-title" id="inspKind">Nothing selected</span>
+        </div>
+      </header>
+
+      <div class="insp-empty" id="inspEmpty">
+        Click an element on the slide to select it. Double-click text to edit it inline.
+      </div>
+
+      <!-- Text styling -->
+      <div class="insp-section" id="inspText" hidden>
+        <div class="insp-meta" id="inspMeta">—</div>
+
+        <label class="insp-field">
+          <span>Text color</span>
+          <input type="color" id="fldColor" data-prop="color">
+        </label>
+
+        <label class="insp-field">
+          <span>Background</span>
+          <input type="color" id="fldBg" data-prop="backgroundColor">
+        </label>
+
+        <label class="insp-field">
+          <span>Font size <i id="fldSizeVal">—</i></span>
+          <input type="range" id="fldSize" min="10" max="160" step="1" data-prop="fontSize">
+        </label>
+
+        <label class="insp-field">
+          <span>Weight</span>
+          <select id="fldWeight" data-prop="fontWeight">
+            <option value="300">Light</option>
+            <option value="400">Regular</option>
+            <option value="600">Semibold</option>
+            <option value="700">Bold</option>
+            <option value="800">Heavy</option>
+          </select>
+        </label>
+
+        <div class="insp-field">
+          <span>Align</span>
+          <div class="seg" id="fldAlign">
+            <button data-val="left" title="Left">⟸</button>
+            <button data-val="center" title="Center">≡</button>
+            <button data-val="right" title="Right">⟹</button>
+          </div>
+        </div>
+
+        <button class="insp-clear" id="clearStyle">Reset element styling</button>
+      </div>
+
+      <!-- Image controls -->
+      <div class="insp-section" id="inspImage" hidden>
+        <div class="insp-meta" id="inspImgMeta">image</div>
+        <button class="insp-btn" id="uploadImgBtn">Replace with upload…</button>
+        <input type="file" id="uploadImg" accept="image/*" hidden>
+        <label class="insp-field insp-field-col">
+          <span>Regenerate with AI</span>
+          <textarea id="imgPrompt" rows="3" placeholder="describe the image you want…"></textarea>
+        </label>
+        <label class="insp-field">
+          <span>Aspect</span>
+          <select id="imgSize">
+            <option value="1536x1024">Landscape</option>
+            <option value="1024x1024">Square</option>
+            <option value="1024x1536">Portrait</option>
+          </select>
+        </label>
+        <button class="insp-btn insp-btn-primary" id="regenImgBtn">Generate &amp; replace</button>
+        <div class="insp-note" id="imgNote" hidden></div>
+      </div>
+    </aside>
+
+  </main>
+</div>
+
+<script src="editor.js"></script>
+</body>
+</html>
