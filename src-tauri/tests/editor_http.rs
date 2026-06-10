@@ -15,6 +15,7 @@ async fn spawn(decks: std::path::PathBuf, web: std::path::PathBuf) -> String {
         web_dir: web,
         decks_dir: decks,
         cfg: Arc::new(Mutex::new(Some(Default::default()))),
+        app: None,
     };
     let router = build_router(state).await;
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

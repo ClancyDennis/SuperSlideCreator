@@ -39,6 +39,7 @@ pub fn run() {
                 web_dir,
                 decks_dir,
                 cfg: Arc::new(Mutex::new(Some(cfg))),
+                app: Some(app.handle().clone()),
             };
 
             let (port_tx, port_rx) = std::sync::mpsc::channel::<u16>();

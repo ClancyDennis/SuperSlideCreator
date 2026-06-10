@@ -31,6 +31,10 @@ pub struct AppState {
     /// `decks_dir/projects/<id>/`; resolve the active one via `project_dir()`.
     pub decks_dir: PathBuf,
     pub cfg: Arc<Mutex<Option<AppConfig>>>,
+    /// Handle to the Tauri app, used to spawn secondary windows (editor, deck
+    /// preview) from `/api/open-window`. `None` outside the desktop app (e.g.
+    /// the Python-parity integration tests), where the route is unused.
+    pub app: Option<tauri::AppHandle>,
 }
 
 impl AppState {
@@ -83,6 +87,10 @@ pub async fn build_router(state: AppState) -> Router {
         // Open the print page in the user's default browser (WKWebView ignores
         // window.print(), so we hand off to a real browser for Save-as-PDF).
         .route("/api/export/open", axum::routing::post(open_export))
+        // Open a secondary app window (editor / deck preview). Done server-side
+        // because the WKWebView ignores target="_blank", and remote-origin
+        // content (our http relay) can't reach Tauri IPC commands.
+        .route("/api/open-window", axum::routing::post(open_window))
         .fallback_service(web)
         .with_state(state)
 }
@@ -99,6 +107,72 @@ async fn open_export(headers: axum::http::HeaderMap) -> impl IntoResponse {
     match open_in_browser(&url) {
         Ok(()) => (StatusCode::OK, Json(json!({"ok": true}))),
         Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"ok": false, "error": e}))),
+    }
+}
+
+#[derive(Deserialize)]
+struct OpenWindowReq {
+    /// Stable window label; reused so a second click focuses the open window.
+    label: String,
+    /// Relay path to load, e.g. "/editor" or "/slides/deck.html".
+    path: String,
+    title: String,
+}
+
+/// Open (or focus) a secondary app window pointing at one of our own relay
+/// pages. Building a window must happen on the main thread, so we hop there via
+/// `run_on_main_thread`. We derive the origin from the Host header, same as
+/// `open_export`, so no port plumbing is needed.
+async fn open_window(
+    State(state): State<AppState>,
+    headers: axum::http::HeaderMap,
+    Json(req): Json<OpenWindowReq>,
+) -> impl IntoResponse {
+    use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
+
+    let Some(app) = state.app.clone() else {
+        return (StatusCode::SERVICE_UNAVAILABLE, Json(json!({"ok": false, "error": "no app handle"})));
+    };
+    let host = headers
+        .get(axum::http::header::HOST)
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("127.0.0.1")
+        .to_string();
+    let url = format!("http://{host}{}", req.path);
+    let parsed = match url.parse() {
+        Ok(u) => u,
+        Err(e) => {
+            return (StatusCode::BAD_REQUEST, Json(json!({"ok": false, "error": format!("bad url: {e}")})))
+        }
+    };
+
+    let label = req.label.clone();
+    let title = req.title.clone();
+    let app_for_closure = app.clone();
+    let result = app.run_on_main_thread(move || {
+        let app = app_for_closure;
+        if let Some(existing) = app.get_webview_window(&label) {
+            let _ = existing.set_focus();
+            return;
+        }
+        let mut builder = WebviewWindowBuilder::new(&app, &label, WebviewUrl::External(parsed))
+            .title(&title)
+            .inner_size(1400.0, 900.0)
+            .min_inner_size(800.0, 600.0);
+        #[cfg(target_os = "macos")]
+        {
+            builder = builder
+                .title_bar_style(tauri::TitleBarStyle::Overlay)
+                .hidden_title(true);
+        }
+        if let Err(e) = builder.build() {
+            log::error!("open_window build failed: {e}");
+        }
+    });
+
+    match result {
+        Ok(()) => (StatusCode::OK, Json(json!({"ok": true}))),
+        Err(e) => (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"ok": false, "error": e.to_string()}))),
     }
 }
 

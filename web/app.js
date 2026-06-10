@@ -67,7 +67,36 @@
     pickerNote: document.getElementById('pickerNote'),
     // PDF export
     exportPdf: document.getElementById('exportPdf'),
+    // Top-bar links that open a secondary view
+    openEditor: document.getElementById('openEditor'),
+    openDeck: document.getElementById('openDeck'),
   };
+
+  // ——— Open a page in its own app window (desktop) or a browser tab (web) ———
+  // In the Tauri shell, target="_blank" does nothing and remote-origin pages
+  // can't reach IPC, so we ask the relay to spawn a real app window server-side
+  // (POST /api/open-window). On the plain-browser path that route is absent, so
+  // we just let the <a target="_blank"> open a tab. Either way it stays inside
+  // a predictable surface, not the user's random default browser.
+  async function openInAppWindow(e, label, title) {
+    const path = e.currentTarget.getAttribute('href');
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/open-window', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({label, path, title}),
+      });
+      if (res.ok) return;
+    } catch (_) { /* fall through to browser tab */ }
+    window.open(path, '_blank', 'noopener');
+  }
+  if (els.openEditor) {
+    els.openEditor.addEventListener('click', (e) => openInAppWindow(e, 'editor', 'Slide Editor'));
+  }
+  if (els.openDeck) {
+    els.openDeck.addEventListener('click', (e) => openInAppWindow(e, 'deck', 'Deck'));
+  }
 
   // ——— Clock ———
   function tick() {
